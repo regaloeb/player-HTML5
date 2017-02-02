@@ -162,7 +162,6 @@
 }
 .spectrumSound .sineWave {
   margin: auto;
-  display: block;
   background: transparent;
   width: 100%;
   height: 300px;
@@ -175,7 +174,6 @@
 }
 .spectrumSound .circles {
   margin: auto;
-  display: block;
   background: transparent;
   /*width: calc(100% + 300px);
   left: -150px;*/
@@ -200,6 +198,17 @@
 .spectrumSound .spectrum.spectrumNeg {
   top: 12px;
 }
+.spectrumSound .volume-canvas {
+  margin: auto;
+  background: transparent;
+  width: 40px;
+  height: 150px;
+  left: -50px;
+  top: -150px;
+  position: absolute;
+  z-index: 10;
+  display: none;
+}
 .spectrumSound.active .sineWave {
   display: block;
 }
@@ -207,6 +216,9 @@
   display: block;
 }
 .spectrumSound.active .spectrum {
+  display: block;
+}
+.spectrumSound.active .volume-canvas {
   display: block;
 }
 .spectrumSound.active .timeline .progress .line .current:before {
@@ -269,8 +281,8 @@
   height: 30px;
   cursor: pointer;
   position: absolute;
-  top: -60px;
-  left: 0;
+  top: -30px;
+  left: -30px;
   z-index: 1100;
   color: #fff;
   font-size: 20px;
