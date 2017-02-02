@@ -15,7 +15,9 @@
 			circlesView: ($elem.attr('data-circlesView') && $elem.attr('data-circlesView') != '') ? $elem.attr('data-circlesView') : 1,
 			stopOthers: ($elem.attr('data-stopOthers') && $elem.attr('data-stopOthers') != '') ? $elem.attr('data-stopOthers') : 1,
 			autoPlay: ($elem.attr('data-autoplay') && $elem.attr('data-autoplay') != '') ? $elem.attr('data-autoplay') : 0,
-			color: ($elem.attr('data-color') && $elem.attr('data-color') != '') ? $elem.attr('data-color') : 0
+			color: ($elem.attr('data-color') && $elem.attr('data-color') != '') ? $elem.attr('data-color') : 0,
+			volumeView: ($elem.attr('data-volumeView') && $elem.attr('data-volumeView') != '') ? $elem.attr('data-volumeView') : 0,
+			loop: ($elem.attr('data-loop') && $elem.attr('data-loop') != '') ? $elem.attr('data-loop') : 0
 		};
 		//On récupère les data-values présente dans HTML (mais les values passées en JS prennent le dessus)
 		if($elem.attr('data-values')){
@@ -26,7 +28,9 @@
 				'sinusoidView':(dataObj.sinusoidView != null) ? dataObj.sinusoidView : defaults.sinusoidView,
 				'circlesView': (dataObj.circlesView != null) ? dataObj.circlesView : defaults.circlesView,
 				'stopOthers': (dataObj.stopOthers != null) ? dataObj.stopOthers : defaults.stopOthers,
-				'color': (dataObj.color != null) ? dataObj.color : defaults.color
+				'color': (dataObj.color != null) ? dataObj.color : defaults.color,
+				'volumeView': (dataObj.volumeView != null) ? dataObj.volumeView : defaults.volumeView,
+				'loop': (dataObj.loop != null) ? dataObj.loop : defaults.loop
 			}; 
 		}
 
@@ -66,21 +70,10 @@
 				}
 			});
 			
-			if(audioContextOK){
-				// setup a javascript node
-				javascriptNode = context.createScriptProcessor(2048, 1, 1);
-				javascriptNode.connect(context.destination);
-
-				// setup a analyzer
-				analyser = context.createAnalyser();
-				analyser.smoothingTimeConstant = 0.3;
-				
+			if(audioContextOK){			
 				// Wait for window.onload to fire. See crbug.com/112368
 				window.addEventListener('load', function(e) {
-					sourceNode = context.createMediaElementSource(sourceSound);
-					sourceNode.connect(analyser);
-					analyser.connect(javascriptNode);
-					sourceNode.connect(context.destination);
+					setContext();
 					
 					$elem.find('.chapter-line').each(function() {
 						var percent = (100 / sourceSound.duration) * parseFloat($(this).data('time')) + "%";
@@ -109,8 +102,6 @@
 				var lineLength = $elem.find('.timeline .progress .line').width();
 				var time = sourceSound.duration * ((clickPosition - lineOffset) / lineLength);
 				seek(time);
-				// update seekbar
-				updateSeekbar();
 				// autoplay
 				if($elem.find('.play').hasClass('pause')) {
 					$elem.find('.play').click();
@@ -179,6 +170,18 @@
 		// Ici on va coder nos méthodes privées / publiques
 		//publiques : plugin.nomFonction = function(){}
 		//privées : var nomFonction = function(){}
+		var setContext = function(){
+			// setup a javascript node
+			javascriptNode = context.createScriptProcessor(2048, 1, 1);
+			javascriptNode.connect(context.destination);
+			// setup a analyzer
+			analyser = context.createAnalyser();
+			analyser.smoothingTimeConstant = 0.3;
+			sourceNode = context.createMediaElementSource(sourceSound);
+			sourceNode.connect(analyser);
+			analyser.connect(javascriptNode);
+			sourceNode.connect(context.destination);
+		}
 		var play = function(){
 			if(plugin.o.stopOthers){
 				$('.spectrumSound.active').find('.play').trigger('click');
@@ -204,7 +207,20 @@
 			$elem.find('.play').addClass('pause');
 		}
 		var seek = function(time){
-			sourceSound.currentTime = time;
+			var durationLoaded = sourceSound.buffered.end(sourceSound.buffered.length - 1);
+			//if(time > durationLoaded){
+			//	return;
+			//}
+			//else{
+				context.close();
+				setTimeout(function(){
+					sourceSound.currentTime = time;
+				}, 200);
+				setTimeout(function(){
+					context = new AudioContext();
+					setContext();
+				}, 400);
+			//}
 		}
 		var setVolume = function(vol){
 			sourceSound.volume = vol;
@@ -223,52 +239,21 @@
 		var draw = function() {
 			if(audioContextOK){
 				drawAnimationFrame = requestAnimationFrame(draw);
-				if(plugin.o.color){
-					var colors = plugin.o.color.split(',');
-					randR = colors[0];
-					randV = colors[1];
-					randB = colors[2];
-				}
 				//sineWave
 				if(plugin.o.sinusoidView){
-					analyser.fftSize = sineWaveFft;
-					bufferLength = analyser.fftSize;				
-					var dataArray = new Uint8Array(bufferLength);
-					analyser.getByteTimeDomainData(dataArray);
-					// clear the current state
-					canvasCtx.clearRect(0, 0, sineWaveWidth, sineWaveHeight);
-					// set the fill style
-					canvasCtx.fillStyle = 'rgba(0, 0, 0, 0)';
-					canvasCtx.fillRect(0, 0, sineWaveWidth, sineWaveHeight);
-					canvasCtx.lineWidth = 10;
-					//canvasCtx.strokeStyle = "rgba("+randR+", "+randV+", "+randB+", 0.5)";
-					canvasCtx.strokeStyle = "rgba("+(255-randR)+", "+(255-randV)+", "+(255-randB)+", 0.5)";
-					drawSineWave(dataArray);
+					drawSineWave();
 				}
 				//bars
 				if(plugin.o.spectreView){
-					analyser.fftSize = spectrumFft;
-					var array =  new Uint8Array(analyser.frequencyBinCount);
-					analyser.getByteFrequencyData(array);
-					// clear the current state
-					ctxCanvasSpectrumPos.clearRect(0, 0, spectrumWidth, spectrumHeight);
-					ctxCanvasSpectrumNeg.clearRect(0, 0, spectrumWidth, spectrumHeight);
-					// set the fill style
-					ctxCanvasSpectrumPos.fillStyle = "rgba("+randR+", "+randV+", "+randB+", 0.5)";
-					ctxCanvasSpectrumNeg.fillStyle = "rgba("+randR+", "+randV+", "+randB+", 0.5)";
-					drawSpectrum(array);
+					drawSpectrum();
 				}
 				//circles
 				if(plugin.o.circlesView){
-					analyser.fftSize = circlesFft;
-					var circlesArray =  new Uint8Array(analyser.frequencyBinCount);
-					analyser.getByteFrequencyData(circlesArray);
-					// clear the current state
-					ctxCanvascircles.clearRect(0, 0, circlesWidth, circlesHeight);
-					ctxCanvascircles.clearRect(0, 0, circlesWidth, circlesHeight);
-					// set the fill style
-					ctxCanvascircles.fillStyle = "rgba("+randR+", "+randV+", "+randB+", "+5/circlesFft+")";
-					drawCircles(circlesArray);
+					drawCircles();
+				}
+				//volume
+				if(plugin.o.volumeView){
+					drawVolume();
 				}
 			}
 		}
@@ -276,7 +261,14 @@
 		var randR = Math.round(Math.random() * (255 - 0) + 0);
 		var randV = Math.round(Math.random() * (255 - 0) + 0);
 		var randB = Math.round(Math.random() * (255 - 0) + 0);
-
+		
+		if(defaults.color){
+			var colors = defaults.color.split(',');
+			randR = colors[0];
+			randV = colors[1];
+			randB = colors[2];
+		}
+				
 		// dataObj from HTML data-values
 		var dataObj;
 		
@@ -286,6 +278,17 @@
 		// create the audio context
 		if(audioContextOK){
 			var context = new AudioContext();
+			
+				sourceSound.addEventListener('ended',
+					function(){
+						seek(0);
+						pause();
+						if(defaults.loop){
+							play();
+						}
+					}
+				,false);
+			
 		}
 		
 		// vars for contextAudio
@@ -301,7 +304,19 @@
 		var sineWaveHeight = canvas.height;
 		var sineWaveFft = 2048;
 		var bufferLength;				
-		function drawSineWave(dataArray) {
+		function drawSineWave() {
+			analyser.fftSize = sineWaveFft;
+			bufferLength = analyser.fftSize;				
+			var dataArray = new Uint8Array(bufferLength);
+			analyser.getByteTimeDomainData(dataArray);
+			// clear the current state
+			canvasCtx.clearRect(0, 0, sineWaveWidth, sineWaveHeight);
+			// set the fill style
+			canvasCtx.fillStyle = 'rgba(0, 0, 0, 0)';
+			canvasCtx.fillRect(0, 0, sineWaveWidth, sineWaveHeight);
+			canvasCtx.lineWidth = 10;
+			//canvasCtx.strokeStyle = "rgba("+randR+", "+randV+", "+randB+", 0.5)";
+			canvasCtx.strokeStyle = "rgba("+(255-randR)+", "+(255-randV)+", "+(255-randB)+", 0.5)";
 			canvasCtx.beginPath();
 			var sliceWidth = sineWaveWidth * 1.0 / bufferLength;
 			var x = 0;
@@ -327,7 +342,16 @@
 		var spectrumWidth = ($elem.find(".timeline .container").innerWidth() > 0) ? $elem.find(".timeline .container").innerWidth() : window.innerWidth;
 		var ctxCanvasSpectrumPos = $elem.find(".spectrumPos").get()[0].getContext("2d");
 		var ctxCanvasSpectrumNeg = $elem.find(".spectrumNeg").get()[0].getContext("2d");	
-		function drawSpectrum(array) {
+		function drawSpectrum() {
+			analyser.fftSize = spectrumFft;
+			var array =  new Uint8Array(analyser.frequencyBinCount);
+			analyser.getByteFrequencyData(array);
+			// clear the current state
+			ctxCanvasSpectrumPos.clearRect(0, 0, spectrumWidth, spectrumHeight);
+			ctxCanvasSpectrumNeg.clearRect(0, 0, spectrumWidth, spectrumHeight);
+			// set the fill style
+			ctxCanvasSpectrumPos.fillStyle = "rgba("+randR+", "+randV+", "+randB+", 0.5)";
+			ctxCanvasSpectrumNeg.fillStyle = "rgba("+randR+", "+randV+", "+randB+", 0.5)";
 			for ( var i = 0; i < (array.length); i++ ){
 				var value = array[i];
 				var barHeight = value*spectrumHeightRatio;
@@ -343,17 +367,54 @@
 		var circlesFft = 32;
 		var circlesWidth = ($elem.find(".timeline .container").innerWidth() > 0) ? $elem.find(".timeline .container").innerWidth() : window.innerWidth;
 		var ctxCanvascircles = $elem.find(".circles").get()[0].getContext("2d");	
-		function drawCircles(dataArray) {
+		function drawCircles() {
+			analyser.fftSize = circlesFft;
+			var circlesArray =  new Uint8Array(analyser.frequencyBinCount);
+			analyser.getByteFrequencyData(circlesArray);
+			// clear the current state
+			ctxCanvascircles.clearRect(0, 0, circlesWidth, circlesHeight);
+			// set the fill style
+			ctxCanvascircles.fillStyle = "rgba("+randR+", "+randV+", "+randB+", "+5/circlesFft+")";
 			var x = ((sourceSound.currentTime/sourceSound.duration)*circlesWidth) - parseInt($elem.find(".circles").css('left'), 10);
-			//console.log($elem.find(".circles").css('left'))
-			for(var i = dataArray.length-1; i >=0; i--) {
+			for(var i = circlesArray.length-1; i >=0; i--) {
 				ctxCanvascircles.beginPath();
-				var v = dataArray[i] * circlesHeightRatio;
+				var v = circlesArray[i] * circlesHeightRatio;
 				var y = circlesHeight/2;
 				ctxCanvascircles.arc(x, y, v, 0, 2*Math.PI);
 				ctxCanvascircles.fill();
 			}
 		};
+		
+		//volume-canvas
+		if($elem.find(".volume-canvas").length){
+			var volumeHeightRatio = 0.1;
+			var ctxCanvasVolume = $elem.find(".volume-canvas").get()[0].getContext("2d");
+			var volumeGradient = ctxCanvasVolume.createLinearGradient(0,0,0,150);
+			volumeGradient.addColorStop(1, 'rgba('+randR+', '+randV+', '+randB+', 1)');
+			volumeGradient.addColorStop(0.75, 'rgba('+randR+', '+randV+', '+randB+', 0.7)');
+			volumeGradient.addColorStop(0.25, 'rgba('+randR+', '+randV+', '+randB+', 0.5)');
+			volumeGradient.addColorStop(0, 'rgba('+randR+', '+randV+', '+randB+', 0.3)');
+			var volumeFft = 32;
+			function drawVolume(){
+				analyser.fftSize = volumeFft;
+				var volumeArray =  new Uint8Array(analyser.frequencyBinCount);
+				analyser.getByteFrequencyData(volumeArray);
+				var values = 0;
+				var average = 0;
+				var length = volumeArray.length;
+				// get all the frequency amplitudes
+				for (var i = 0; i < length; i++) {
+					values += volumeArray[i];
+				}
+				average = (values / length);
+				// clear the current state
+				ctxCanvasVolume.clearRect(0, 0, 280, 150);
+				// set the fill style
+				ctxCanvasVolume.fillStyle = volumeGradient;
+				// create the meters
+				ctxCanvasVolume.fillRect(0, 150-average, 280, average);
+			}
+		}
 		
 		//update seek bar
 		var lastUpdateSeekbar = 0;
@@ -372,7 +433,7 @@
 			var currentTime =  sourceSound.currentTime;
 			var currentMinutes = Math.floor(currentTime / 60);
 			var currentSeconds = Math.floor(currentTime % 60);
-			if(currentSeconds.toString().length<2) {
+			if(currentSeconds.toString().length < 2) {
 				currentSeconds = '0' + currentSeconds;
 			}
 			$elem.find('.timeline .currentTime').html(currentMinutes + ":" + currentSeconds);
@@ -415,7 +476,6 @@
 		}
 		// On appelle la méthode publique init qui va se charger de mettre en place toutes les méthodes de notre plugin pour qu'il fonctionne
 		plugin.init();
-
 	}
 
 	// On ajoute le plugin à l'objet jQuery $.fn
