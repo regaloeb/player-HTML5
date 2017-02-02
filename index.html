@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
         
         <title>Audiocontext</title>		
-	<meta name="description" content="On s'amuse avec audiocontext, Lonely LoeB et le Cochon 311 du Hell's Fire Club">
+	<meta name="description" content="Plugin jQuery player video/audio HTML5 avec visualisation du spectre audio et chapitres.">
 		
         <link href='https://fonts.googleapis.com/css?family=Open+Sans:300' rel='stylesheet' type='text/css'>
         <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:700,300' rel='stylesheet' type='text/css'>
@@ -31,9 +31,9 @@
 			<section class="demo">
 				<h1><span class="deco">Le spectre du son</span></h1>
 			</section>
-			<section class="spectrumSound">
+			<section class="spectrumSound" data-volumeView="1">
 				<h2><span>Lonely LoeB - Stuck In The Hole Of My Mind</span></h2>
-				<audio controls loop class="sourceSound">
+				<audio controls class="sourceSound">
 					<source src="zik/Lonely LoeB - Stuck In The Hole Of My Mind.mp3" type="audio/mpeg">
 					<source src="zik/Lonely LoeB - Stuck In The Hole Of My Mind.ogg" type="audio/ogg">
 					Your browser does not support the audio element, go to hell.
@@ -67,13 +67,14 @@
 						<canvas class="spectrum spectrumNeg"></canvas>
 						<canvas class="sineWave"></canvas>
 						<canvas class="circles"></canvas>
+						<canvas class="volume-canvas"></canvas>
 					</div>
 				</div>
 			</section>
 					
 			<section class="spectrumSound jaune" data-values="{'spectreView':1, 'sinusoidView':1, 'circlesView':1, 'stopOthers': 0, 'color': '251,233,21'}">
 				<h2><span>Lonely LoeB - Softer and Softer</span></h2>
-				<audio controls loop class="sourceSound">
+				<audio controls class="sourceSound">
 					<source src="zik/Lonely LoeB - Softer and Softer 12 strings.mp3" type="audio/mpeg">
 					<source src="zik/Lonely LoeB - Softer and Softer 12 strings.ogg" type="audio/ogg">
 					Your browser does not support the audio element, go to hell.
@@ -194,7 +195,7 @@
 					Inclure le plugin à sa page :<br>
 					<span class="code">&lt;script src="js/regalSpectrum-plugin.js">&lt;/script></span><br><br>
 					Déclarer les modules au domready :<br>
-					<span class="code">$('.spectrumSound').each(function(){$(this).regalSpectrum();});</span><br><br>
+					<span class="code">$('.spectrumSound').regalSpectrum();</span><br><br>
 					Oscilloscope (<span class="code">sinusoidView</span>) et barres superposés (<span class="code">spectreView</span>), couleur aléatoire et visualisation en cercles concentriques qui suit la barre de progression (<span class="code">circlesView</span>) par défaut.<br>
 					Fermeture des sons en cours de lecture lorsqu'on en lance un nouveau (<span class="code">stopOthers</span>).<br>
 					Possibilité de choisir un ou plusieurs types de visualisation et la couleur avec attributs data-values dans le HTML ou au moment de l'initialisation javascript du plugin :<br>
@@ -202,16 +203,60 @@
 					<span class="code">$(this).regalSpectrum({'spectreView':0, 'sinusoidView':1, 'circlesView':1, 'stopOthers': 0});</span><br><br>
 					Chapitrage possible avec visualisation sur la barre de progression.<br>
 					<span class="code">&lt;ul class="chapters-line"><br>
-					&nbsp; &nbsp; &lt;li>&lt;a href="#" data-time="0" data-end="198" class="chapter-line icon-arrow-down">Titre chapitre&lt;/a>&lt;/li><br></span>
-					<span class="code">data-time</span> le timecode du début du chapitre en secondes.<br>
-					<span class="code">data-end</span> le timecode de la fin du chapitre en secondes.<br>
+					&nbsp; &nbsp; &lt;li>&lt;a href="#" data-time="0" data-end="198" class="chapter-line icon-arrow-down">Titre chapitre&lt;/a>&lt;/li><br>
+					&nbsp; &nbsp; ...<br>
+					&lt;/ul><br></span>
+					&nbsp; &nbsp; <span class="code">data-time</span> le timecode du début du chapitre en secondes.<br>
+					&nbsp; &nbsp; <span class="code">data-end</span> le timecode de la fin du chapitre en secondes.<br>
 					<span class="code">class="chapter-line ..."</span> obligatoire.<br>
 					Ensemble à placer dans la structure :<br>
 					<span class="code">&lt;div class="seekbar">&lt;div class="progress"></span><br>
 					Lorsque la vidéo atteint <span class="code">data-time</span>, on applique à <span class="code">chapter-line</span> la classe <span class="code">active</span>.<br>
 					Lorsque la vidéo atteint <span class="code">data-end</span>, on applique à <span class="code">chapter-line</span> la classe <span class="code">done</span>.<br><br>
 					Bien sûr, ce plugin évoluera au gré des envies et des besoins.<br><br>
-					Non-compatible avec IE (même EDGE), le plugin devient juste un player son ou vidéo avec simple barre de progression... dommage pour eux&thinsp;!
+					Non-compatible avec IE (même EDGE), le plugin devient juste un player son ou vidéo avec simple barre de progression... dommage pour eux&thinsp;!<br><br>
+					<h2>Code HTML complet pour un module :</h2>
+					<textarea>
+<section class="spectrumSound jaune" data-values="{'spectreView':1, 'sinusoidView':1, 'circlesView':1, 'stopOthers': 0, 'color': '251,233,21'}">
+	<h2><span>Lonely LoeB - Softer and Softer</span></h2>
+	<audio controls loop class="sourceSound">
+		<source src="zik/Lonely LoeB - Softer and Softer 12 strings.mp3" type="audio/mpeg">
+		<source src="zik/Lonely LoeB - Softer and Softer 12 strings.ogg" type="audio/ogg">
+		Your browser does not support the audio element, go to hell.
+	</audio>
+	<div class="loading"></div>
+	<div class="timeline">
+		<div class="container">
+			<div class="play pause icon-play3"></div>
+			<div class="volume icon-volume-high"></div>
+			<div class="currentTime"></div>
+			<div class="remainingTime"></div>
+			<div class="rewind"></div>
+			<div class="seekbar">
+				<div class="progress">
+					<div class="line">
+						<div class="current"></div>
+					</div>
+					<ul class="chapters-line">
+						<li><a href="#" data-time="0" data-end="16" class="chapter-line icon-arrow-down">Intro</a></li>
+						<li><a href="#" data-time="16" data-end="32" class="chapter-line icon-arrow-down">Couplet</a></li>
+						<li><a href="#" data-time="32" data-end="48.5" class="chapter-line icon-arrow-down">Refrain</a></li>
+						<li><a href="#" data-time="48.5" data-end="80.5" class="chapter-line icon-arrow-down">Deuxième couplet</a></li>
+						<li><a href="#" data-time="80.5" data-end="112" class="chapter-line icon-arrow-down">Solo</a></li>	
+						<li><a href="#" data-time="112" data-end="128" class="chapter-line icon-arrow-down">Final</a></li>
+						<li class="chapters-line-roll"></li>
+					</ul>
+				</div>
+			</div>
+			<canvas class="spectrum spectrumPos"></canvas>
+			<canvas class="spectrum spectrumNeg"></canvas>
+			<canvas class="sineWave"></canvas>
+			<canvas class="circles"></canvas>
+		</div>
+	</div>
+</section>				
+					</textarea>
+					<h2>Github : </h2> <a href="https://github.com/regaloeb/player-HTML5" target="_blank">https://github.com/regaloeb/player-HTML5</a>
 				</p>
 				<div class="social">
 					<div class="fb-like" data-href="http://regaloeb.com/pages/audiocontext/index.html" data-width="300" data-layout="button_count" data-action="like" data-size="small" data-show-faces="false" data-share="true"></div>
