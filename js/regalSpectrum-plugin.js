@@ -277,17 +277,21 @@
 			
 		// create the audio context
 		if(audioContextOK){
-			var context = new AudioContext();
+			// 1 seul context par page !
+			if(!window.context){
+				window.context = new AudioContext();
+			}
+			var context = window.context;
 			
-				sourceSound.addEventListener('ended',
-					function(){
-						seek(0);
-						pause();
-						if(defaults.loop){
-							play();
-						}
+			sourceSound.addEventListener('ended',
+				function(){
+					seek(0);
+					pause();
+					if(defaults.loop){
+						play();
 					}
-				,false);
+				}
+			,false);
 			
 		}
 		
